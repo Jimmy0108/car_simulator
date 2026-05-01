@@ -10,8 +10,10 @@ from config import (
     PARAMS,
 )
 from heuristics import (
+    build_admissible_set_around_goal,
     dynamic_waypoint_optimization,
     evaluate_dual_heuristic,
+    get_nonholonomic_heuristic_table,
     get_voronoi_potential,
 )
 from models import State
@@ -47,13 +49,22 @@ def expand_nodes(state):
     return neighbors
 
 
-def single_stage_hybrid_a_star(start_state, goal_state, obstacle_map, enable_rs_shot=True):
+def single_stage_hybrid_a_star(
+    start_state,
+    goal_state,
+    obstacle_map,
+    enable_rs_shot=True,
+    nh_table=None,
+    guidance_set=None,
+    lane_heading=-math.pi / 2,
+):
     open_heap = []
     close_list = set()
     all_explored = []
     push_id = 0
+    dynamic_wp = None
 
-    start_state.f_cost = PARAMS['w1'] * 0 + PARAMS['w2'] * evaluate_dual_heuristic(start_state, goal_state, obstacle_map)
+    start_state.f_cost = PARAMS['w1'] * 0 + PARAMS['w2'] * evaluate_dual_heuristic(start_state, goal_state, obstacle_map, nh_table=nh_table)
     heapq.heappush(open_heap, (start_state.f_cost, push_id, start_state))
     step = 0
 
@@ -61,11 +72,16 @@ def single_stage_hybrid_a_star(start_state, goal_state, obstacle_map, enable_rs_
         step += 1
         _, _, current_node = heapq.heappop(open_heap)
 
+        if guidance_set and (dynamic_wp is None or step % int(PARAMS['waypoint_update_interval']) == 0):
+            dynamic_wp = dynamic_waypoint_optimization(guidance_set, current_node, obstacle_map, goal_state, lane_heading=lane_heading)
+
         dist = math.hypot(current_node.x - goal_state.x, current_node.y - goal_state.y)
         angle_diff = abs((current_node.theta - goal_state.theta + math.pi) % (2 * math.pi) - math.pi)
 
-        # More aggressive RS shot: try more frequently and when close to goal
-        if enable_rs_shot and (step % 3 == 0 or dist < 3.0):
+        # Stanford-style analytic expansion trigger: periodic + near-goal direct RS connection.
+        rs_interval = max(1, int(PARAMS['rs_shot_interval']))
+        rs_dist_threshold = float(PARAMS['rs_shot_dist_threshold'])
+        if enable_rs_shot and (step % rs_interval == 0 or dist < rs_dist_threshold):
             if rs_collision_free(current_node, goal_state, obstacle_map):
                 print('   [RS Shot] 發現無碰撞 RS 曲線！提早結束搜尋。')
                 qs = (current_node.x, current_node.y, current_node.theta)
@@ -101,9 +117,14 @@ def single_stage_hybrid_a_star(start_state, goal_state, obstacle_map, enable_rs_
             mid_state = State((current_node.x + neighbor.x) / 2.0, (current_node.y + neighbor.y) / 2.0, mid_theta)
             
             if is_collision_free(mid_state, obstacle_map):
-                h_cost = evaluate_dual_heuristic(neighbor, goal_state, obstacle_map)
+                h_cost = evaluate_dual_heuristic(neighbor, goal_state, obstacle_map, nh_table=nh_table)
                 v_cost = get_voronoi_potential(neighbor, obstacle_map)
-                neighbor.f_cost = PARAMS['w1'] * neighbor.g_cost + PARAMS['w2'] * h_cost + PARAMS['w3'] * v_cost
+
+                guidance_bias = 0.0
+                if dynamic_wp is not None:
+                    guidance_bias = PARAMS['guidance_bias_weight'] * math.hypot(neighbor.x - dynamic_wp.x, neighbor.y - dynamic_wp.y)
+
+                neighbor.f_cost = PARAMS['w1'] * neighbor.g_cost + PARAMS['w2'] * h_cost + PARAMS['w3'] * v_cost + guidance_bias
                 push_id += 1
                 heapq.heappush(open_heap, (neighbor.f_cost, push_id, neighbor))
 
@@ -111,12 +132,16 @@ def single_stage_hybrid_a_star(start_state, goal_state, obstacle_map, enable_rs_
 
 
 def multi_stage_planning(start, goal, obs_map):
+    nh_table = get_nonholonomic_heuristic_table()
+
     print('>> 建立目標周圍允許集合 (Admissible Set) ...')
-    admissible_set = []
-    channel_x = AISLE_LEFT_CENTER_X if goal.x < CENTER_WALL_X else AISLE_RIGHT_CENTER_X
-    for y_offset in [-3, 0, 3]:
-        admissible_set.append(State(channel_x, goal.y + y_offset, -math.pi / 2))
-        admissible_set.append(State(channel_x, goal.y + y_offset, math.pi / 2))
+    admissible_set = build_admissible_set_around_goal(goal, obs_map)
+    if not admissible_set:
+        # Fallback keeps planner robust when strict collision criteria reject all precomputed candidates.
+        channel_x = AISLE_LEFT_CENTER_X if goal.x < CENTER_WALL_X else AISLE_RIGHT_CENTER_X
+        for y_offset in [-3, 0, 3]:
+            admissible_set.append(State(channel_x, goal.y + y_offset, -math.pi / 2))
+            admissible_set.append(State(channel_x, goal.y + y_offset, math.pi / 2))
 
     dynamic_wp = dynamic_waypoint_optimization(admissible_set, start, obs_map, goal)
     if dynamic_wp is None:
@@ -127,7 +152,14 @@ def multi_stage_planning(start, goal, obs_map):
     obs_map.precompute_2d_dijkstra(dynamic_wp)
 
     print('>> [階段一] 規劃 入口 -> 動態中繼點 ...')
-    node1, exp1 = single_stage_hybrid_a_star(start, dynamic_wp, obs_map, enable_rs_shot=True)
+    node1, exp1 = single_stage_hybrid_a_star(
+        start,
+        dynamic_wp,
+        obs_map,
+        enable_rs_shot=True,
+        nh_table=nh_table,
+        guidance_set=admissible_set,
+    )
     if not node1:
         return None, exp1
 
@@ -135,7 +167,14 @@ def multi_stage_planning(start, goal, obs_map):
 
     print('>> [階段二] 規劃 中繼點 -> 目標車位 ...')
     start_2 = State(node1.x, node1.y, node1.theta, gear=node1.gear)
-    node2, exp2 = single_stage_hybrid_a_star(start_2, goal, obs_map, enable_rs_shot=True)
+    node2, exp2 = single_stage_hybrid_a_star(
+        start_2,
+        goal,
+        obs_map,
+        enable_rs_shot=True,
+        nh_table=nh_table,
+        guidance_set=admissible_set,
+    )
 
     if not node2:
         return None, exp1 + exp2

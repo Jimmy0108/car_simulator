@@ -1,0 +1,15 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+
+# Tooling / virtual environments
+.venv/
+venv/
+
+# Generated simulation outputs
+result/*.png
+result/*.npz
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

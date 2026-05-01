@@ -66,16 +66,12 @@ def get_quadrant_parking_scenarios(selected_y_by_quadrant):
     scenarios = []
     wb = PARAMS['wheelbase']
     for quadrant, gx, gy in spots:
-        inward_theta = 0.0 if gx < CENTER_WALL_X else math.pi
         outward_theta = math.pi if gx < CENTER_WALL_X else 0.0
 
         # Convert desired geometric-center parking spot to rear-axle goal state.
-        # Slightly back off the inward goal to give more clearance to rear wall
-        in_goal_x = gx - (wb / 2.0) * math.cos(inward_theta) - 0.08 * math.cos(inward_theta)
-        in_goal_y = gy - (wb / 2.0) * math.sin(inward_theta) - 0.08 * math.sin(inward_theta)
+        # Outward-only target: rear-in parking while parked car points toward aisle.
         out_goal_x = gx - (wb / 2.0) * math.cos(outward_theta)
         out_goal_y = gy - (wb / 2.0) * math.sin(outward_theta)
 
-        scenarios.append((quadrant, 'inward', State(in_goal_x, in_goal_y, inward_theta)))
         scenarios.append((quadrant, 'outward', State(out_goal_x, out_goal_y, outward_theta)))
     return scenarios

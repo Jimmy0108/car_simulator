@@ -1,5 +1,6 @@
 import math
 import os
+import time
 
 from config import AISLE_RIGHT_CENTER_X, PARAM_STRATEGIES, apply_param_strategy
 from models import State
@@ -10,6 +11,7 @@ from visualization import plot_results
 
 
 if __name__ == '__main__':
+    run_start_t = time.perf_counter()
     start = State(AISLE_RIGHT_CENTER_X, 44.0, -math.pi / 2)
     obs_map = UndergroundParkingMap()
 
@@ -18,8 +20,13 @@ if __name__ == '__main__':
 
     selected_slots = prompt_quadrant_slot_selection()
     scenarios = get_quadrant_parking_scenarios(selected_slots)
+    total_scenarios = len(scenarios)
+    success_count = 0
+    successful_planning_times = []
+
     for idx, (quadrant, orientation, goal) in enumerate(scenarios, start=1):
-        print(f'\n===== [{idx}/8] {quadrant} - {orientation} =====')
+        scenario_start_t = time.perf_counter()
+        print(f'\n===== [{idx}/{total_scenarios}] {quadrant} - {orientation} =====')
         final_node, all_explored = None, []
         used_strategy = 'none'
         for strategy_name, updates in PARAM_STRATEGIES:
@@ -30,6 +37,8 @@ if __name__ == '__main__':
                 break
 
         if not final_node:
+            scenario_elapsed = time.perf_counter() - scenario_start_t
+            print(f'   [Time] 規劃耗時: {scenario_elapsed:.3f} 秒')
             print('   [Failed] 找不到可行路徑')
             continue
 
@@ -46,5 +55,17 @@ if __name__ == '__main__':
             show_plot=False,
         )
         print(f'   [Saved] {image_path}')
+        scenario_elapsed = time.perf_counter() - scenario_start_t
+        success_count += 1
+        successful_planning_times.append(scenario_elapsed)
+        print(f'   [Time] 規劃耗時: {scenario_elapsed:.3f} 秒')
 
-    print(f'\n完成，共輸出 8 次規劃結果（若個別路徑失敗則不會產圖）。輸出資料夾: {output_dir}')
+    total_elapsed = time.perf_counter() - run_start_t
+    if successful_planning_times:
+        avg_time = sum(successful_planning_times) / len(successful_planning_times)
+        print(f'\n平均生成一段成功路徑耗時: {avg_time:.3f} 秒 ({success_count} 段)')
+    else:
+        print('\n平均生成一段成功路徑耗時: N/A (0 段成功路徑)')
+    print(f'總執行耗時: {total_elapsed:.3f} 秒')
+
+    print(f'\n完成，共輸出 {total_scenarios} 次規劃結果（若個別路徑失敗則不會產圖）。輸出資料夾: {output_dir}')

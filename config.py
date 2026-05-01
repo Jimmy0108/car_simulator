@@ -24,6 +24,31 @@ PARAMS = {
     'corner_clearance': 0.40,  # 車輛四個角落與障礙物之間的安全距離。
     'step_size': 0.5,  # 路徑規劃時每一步的長度（米）。
     'max_search_steps': 50000,  # Hybrid A*搜索演算法的最大搜索步數。
+    'rs_shot_interval': 3,  # 週期性 RS 解析展開觸發間隔（每展開 N 個節點嘗試一次）。
+    'rs_shot_dist_threshold': 3.0,  # 與目標距離小於此值時，強制嘗試 RS 解析展開。
+    'guidance_bias_weight': 0.15,  # 動態中繼點引導偏置權重，越大越偏向中繼點。
+    'waypoint_update_interval': 5,  # 在 A* 中重新挑選最佳中繼點的節點展開間隔。
+    'h_table_xy_res': 1.0,  # non-holonomic 啟發式查表的 x/y 離散解析度（米）。
+    'h_table_xy_extent': 15.0,  # non-holonomic 啟發式查表的 x/y 範圍（±米）。
+    'h_table_theta_bins': 36,  # non-holonomic 啟發式查表的朝向離散數。
+    'h_table_use_disk_cache': 1,  # 是否啟用 non-holonomic 查表磁碟快取（1=啟用, 0=停用）。
+    'h_table_cache_filename': 'nh_heuristic_table.npz',  # 查表快取檔名。
+    'cg_maxiter': 1,  # CG 平滑器最大迭代次數。
+    'cg_gtol': 1e-4,  # CG 平滑器梯度收斂門檻。
+    'cg_min_improvement_ratio': 0.01,  # 若未收斂，至少需要比初始成本改善多少比例才保留結果。
+    'cg_enable_stage2': 0,  # 是否啟用第二階段 supersample + CG 曲率優化。
+    'cg_stage2_supersample_spacing': 0.35,  # 第二階段超取樣點距（米）。
+    'cg_stage2_maxiter': 40,  # 第二階段 CG 最大迭代數。
+    'cg_stage2_gtol': 2e-3,  # 第二階段 CG 梯度門檻。
+    'cg_stage2_min_improvement_ratio': 0.005,  # 第二階段未收斂時的最小改善比例。
+    
+    # Stanford CG 平滑器四個核心權重 (根據論文 Section 4.3)
+    'w_rho': 10.0,      # $w_\rho$ Voronoi場懲罰權重：將車推離障礙物
+    'w_o': 50.0,        # $w_o$ 碰撞懲罰權重：嚴格懲罰與障礙物碰撞，搭配 $d_{max}$ 與二次函數
+    'w_kappa': 0.5,     # $w_\kappa$ 曲率懲罰權重：限制瞬間曲率符合非完整約束
+    'w_s': 0.5,         # $w_s$ 平滑度懲罰權重：最小化路徑劇烈變化，均勻分佈節點
+    'd_max': 1.3,       # $d_{max}$ 障礙物距離閾值（米）：低於此距離時觸發 $w_o$ 懲罰
+    'kappa_max': 0.22,  # $\kappa_{max}$ 最大允許曲率（1/轉彎半徑，基於 turning_radius=4.59m）
 }
 
 PARAM_STRATEGIES = [

@@ -1,5 +1,6 @@
 import math
 import os
+import time
 import traceback
 
 from PyQt6.QtCore import Qt
@@ -260,10 +261,14 @@ class PlannerGui(QMainWindow):
             )
             obs_map = UndergroundParkingMap()
             scenarios = get_quadrant_parking_scenarios(selected_slots)
+            total_scenarios = len(scenarios)
 
             success_count = 0
+            successful_planning_times = []
+            run_start_t = time.perf_counter()
             for idx, (quadrant, orientation, goal) in enumerate(scenarios, start=1):
-                self._log(f'===== [{idx}/8] {quadrant} - {orientation} =====')
+                scenario_start_t = time.perf_counter()
+                self._log(f'===== [{idx}/{total_scenarios}] {quadrant} - {orientation} =====')
                 QApplication.processEvents()
 
                 final_node, all_explored = None, []
@@ -279,6 +284,8 @@ class PlannerGui(QMainWindow):
                         break
 
                 if not final_node:
+                    scenario_elapsed = time.perf_counter() - scenario_start_t
+                    self._log(f'  [Time] 規劃耗時: {scenario_elapsed:.3f} 秒')
                     self._log('  [Failed] 找不到可行路徑')
                     continue
 
@@ -296,7 +303,10 @@ class PlannerGui(QMainWindow):
                 )
                 self.result_images.append(image_path)
                 success_count += 1
+                scenario_elapsed = time.perf_counter() - scenario_start_t
+                successful_planning_times.append(scenario_elapsed)
                 self._log(f'  [Saved] {image_path}')
+                self._log(f'  [Time] 規劃耗時: {scenario_elapsed:.3f} 秒')
                 QApplication.processEvents()
 
             # Update combo box with results
@@ -308,8 +318,22 @@ class PlannerGui(QMainWindow):
             if self.result_images:
                 self.result_combo.setCurrentIndex(0)
 
-            self._log(f'\nDone. Success: {success_count}/8')
-            QMessageBox.information(self, 'Done', f'Planning completed. Success: {success_count}/8')
+            total_elapsed = time.perf_counter() - run_start_t
+            if successful_planning_times:
+                avg_time = sum(successful_planning_times) / len(successful_planning_times)
+                avg_line = f'Average successful path time: {avg_time:.3f} s ({success_count} paths)'
+            else:
+                avg_line = 'Average successful path time: N/A (0 paths)'
+
+            self._log(f'\nDone. Success: {success_count}/{total_scenarios}')
+            self._log(avg_line)
+            self._log(f'Total elapsed time: {total_elapsed:.3f} s')
+
+            QMessageBox.information(
+                self,
+                'Done',
+                f'Planning completed. Success: {success_count}/{total_scenarios}\n{avg_line}\nTotal elapsed: {total_elapsed:.3f} s',
+            )
         except Exception as exc:
             self._log('ERROR:\n' + traceback.format_exc())
             QMessageBox.critical(self, 'Error', str(exc))
