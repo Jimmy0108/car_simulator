@@ -80,8 +80,8 @@ def _optimize_points_cg(points_ref, gears, obs_map, fixed_mask, maxiter, gtol, m
 
     # Stanford CG 平滑器四個核心權重（根據論文 Section 4.3）
     # 目標函數 = w_rho·E_rho + w_o·E_o + w_kappa·E_kappa + w_s·E_s
-    w_rho = PARAMS.get('w_rho', 10.0)      # Voronoi 場懲罰權重
-    w_o = PARAMS.get('w_o', 50.0)          # 碰撞懲罰權重
+    w_rho = PARAMS.get('w_rho', 10.0)      # 數據保持項權重：維持參考路徑形狀
+    w_o = PARAMS.get('w_o', 50.0)          # 障礙物/碰撞懲罰權重
     w_kappa = PARAMS.get('w_kappa', 0.5)   # 曲率懲罰權重
     w_s = PARAMS.get('w_s', 0.5)           # 平滑度懲罰權重
     d_max = PARAMS.get('d_max', 1.3)       # 障礙物距離閾值
@@ -238,8 +238,8 @@ def smooth_trajectory_cg(path_nodes, obs_map):
 
     # Stanford CG 平滑器四個核心權重（根據論文 Section 4.3）
     # Stage-1：使用標準權重平滑從 A* 得到的粗糙路徑
-    w_rho = PARAMS.get('w_rho', 10.0)      # Voronoi 場懲罰權重
-    w_o = PARAMS.get('w_o', 50.0)          # 碰撞懲罰權重
+    w_rho = PARAMS.get('w_rho', 10.0)      # 數據保持項權重：維持參考路徑形狀
+    w_o = PARAMS.get('w_o', 50.0)          # 障礙物/碰撞懲罰權重
     w_kappa = PARAMS.get('w_kappa', 0.5)   # 曲率懲罰權重
     w_s = PARAMS.get('w_s', 0.5)           # 平滑度懲罰權重
     d_max = PARAMS.get('d_max', 1.3)       # 障礙物距離閾值

@@ -1,0 +1,115 @@
+# =============================================================================
+# 簡易露天停車場 (Simple Open Parking Lot) — 用於演算法驗證
+# =============================================================================
+# 這是一個較小、較簡單的停車場地圖，適合快速測試 Hybrid A* + Voronoi。
+# 特徵：
+#   - 單一車道 (無方向限制)
+#   - 兩排車格 (面對面)
+#   - 較小尺寸 → 搜尋更快
+
+metadata:
+  name: "簡易露天停車場"
+  version: "1.0"
+  description: "小型停車場，用於快速驗證 Hybrid A* + Voronoi 演算法"
+
+layout:
+  width: 25.0
+  height: 30.0
+  grid_resolution: 1.0
+  obstacle_sample_step: 0.5
+
+obstacles:
+  # 外牆 (矩形)
+  - type: rect
+    name: "boundary"
+    origin: [0, 0]
+    width: 25.0
+    height: 30.0
+
+  # 左排車格分隔線 (x: 0 ~ 5.5)
+  - type: horizontal_lines
+    name: "left_row_slots"
+    x_range: [0.0, 5.5]
+    y_values: [5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+
+  # 右排車格分隔線 (x: 19.5 ~ 25.0)
+  - type: horizontal_lines
+    name: "right_row_slots"
+    x_range: [19.5, 25.0]
+    y_values: [5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+
+# 無方向規則 (開放式停車場)
+directional_rules:
+  aisles: []
+  unrestricted_zones:
+    - name: "entire_lot"
+      x_range: [0, 25]
+      description: "全區域無方向限制"
+  validation_parameters:
+    distance_threshold: 5.0
+    min_reverse_reject: 0.25
+    min_aligned_fraction: 0.90
+    verbose: false
+
+visualization:
+  walls:
+    - points: [[0, 0], [25, 0]]
+      style: wall
+    - points: [[25, 0], [25, 30]]
+      style: wall
+    - points: [[0, 30], [25, 30]]
+      style: wall
+    - points: [[0, 0], [0, 30]]
+      style: wall
+
+  slot_lines:
+    - x_range: [0.0, 5.5]
+      y_values: [5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+      style: env
+    - x_range: [19.5, 25.0]
+      y_values: [5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+      style: env
+
+  aisle_guides:
+    - x: 5.5
+      y_range: [5.0, 25.0]
+      style: open
+    - x: 19.5
+      y_range: [5.0, 25.0]
+      style: open
+
+  entrance:
+    x_range: [10.0, 15.0]
+    y: 30.0
+
+start_state:
+  x: 12.5
+  y: 29.0
+  theta: -1.5707963
+
+scenarios:
+  center_wall_x: 12.5    # 虛擬中心線
+  spots:
+    - name: "left_upper"
+      center_x: 2.75
+      center_y_options: [16.25, 18.75, 21.25, 23.75]
+      default_y_index: 2
+      outward_theta: 0.0     # 車頭朝右 (朝向車道)
+
+    - name: "left_lower"
+      center_x: 2.75
+      center_y_options: [6.25, 8.75, 11.25, 13.75]
+      default_y_index: 2
+      outward_theta: 0.0
+
+    - name: "right_upper"
+      center_x: 22.25
+      center_y_options: [16.25, 18.75, 21.25, 23.75]
+      default_y_index: 2
+      outward_theta: 3.14159265   # 車頭朝左 (朝向車道)
+
+    - name: "right_lower"
+      center_x: 22.25
+      center_y_options: [6.25, 8.75, 11.25, 13.75]
+      default_y_index: 2
+      outward_theta: 3.14159265

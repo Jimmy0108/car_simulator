@@ -163,7 +163,7 @@ def get_voronoi_potential(state, obs_map):# 基於 Voronoi 圖的勢能函數，
 
 
 def evaluate_dual_heuristic(state, goal_state, obs_map, nh_table=None):
-    # H1: non-holonomic-without-obstacles lookup (懂車不懂路)
+    # H1: obstacle-aware 2D Dijkstra/DP (懂路不懂車)
     gx, gy = int(state.x / obs_map.grid_res), int(state.y / obs_map.grid_res)
 
     if obs_map.dijkstra_grid is not None:
@@ -175,7 +175,7 @@ def evaluate_dual_heuristic(state, goal_state, obs_map, nh_table=None):
     else:
         dijkstra_cost = math.hypot(goal_state.x - state.x, goal_state.y - state.y)
 
-    # H2: obstacle-aware 2D Dijkstra/DP (懂路不懂車)
+    # H2: non-holonomic-without-obstacles lookup (懂車不懂路)
     if nh_table is not None:
         nh_cost = nh_table.lookup(state, goal_state)
     else:

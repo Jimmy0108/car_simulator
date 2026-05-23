@@ -1,0 +1,156 @@
+# =============================================================================
+# L型停車場 (L-Shaped Parking Lot)
+# =============================================================================
+metadata:
+  name: "L型停車場"
+  version: "1.0"
+  description: "從左下角進入，具有 L 型車道，車道兩側皆有車格。"
+
+layout:
+  width: 44.0
+  height: 39.0
+  grid_resolution: 1.0
+  obstacle_sample_step: 0.5
+
+obstacles:
+  # 外牆
+  - type: line
+    start: [0.0, 0.0]
+    end: [33.0, 0.0]
+  - type: line
+    start: [33.0, 0.0]
+    end: [33.0, 5.5]
+  - type: line
+    start: [33.0, 5.5]
+    end: [38.5, 5.5]
+  - type: line
+    start: [38.5, 5.5]
+    end: [38.5, 38.0]
+  - type: line
+    start: [38.5, 38.0]
+    end: [33.0, 38.0]
+  - type: line
+    start: [33.0, 38.0]
+    end: [33.0, 39.0]
+  - type: line
+    start: [33.0, 39.0]
+    end: [19.5, 39.0]
+  - type: line
+    start: [19.5, 39.0]
+    end: [19.5, 19.0]
+  - type: line
+    start: [19.5, 19.0]
+    end: [0.0, 19.0]
+  - type: line
+    start: [0.0, 19.0]
+    end: [0.0, 13.5]
+  - type: line
+    start: [0.0, 5.5]
+    end: [0.0, 0.0]
+
+  # 內部車格分隔線
+  # 1. 水平段頂部車格 (Top spots)
+  - type: vertical_lines
+    y_range: [13.5, 19.0]
+    x_values: [0.0, 2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+
+  # 2. 水平段底部車格 (Bottom spots)
+  - type: vertical_lines
+    y_range: [0.0, 5.5]
+    x_values: [0.5, 3.0, 5.5, 8.0, 10.5, 13.0, 15.5, 18.0, 20.5, 23.0, 25.5, 28.0, 30.5, 33.0]
+
+  # 3. 垂直段左側車格 (Left spots)
+  - type: horizontal_lines
+    x_range: [19.5, 25.0]
+    y_values: [19.0, 21.5, 24.0, 26.5, 29.0, 31.5, 34.0, 36.5, 39.0]
+
+  # 4. 垂直段右側車格 (Right spots)
+  - type: horizontal_lines
+    x_range: [33.0, 38.5]
+    y_values: [5.5, 8.0, 10.5, 13.0, 15.5, 18.0, 20.5, 23.0, 25.5, 28.0, 30.5, 33.0, 35.5, 38.0]
+
+directional_rules:
+  aisles: []
+  unrestricted_zones:
+    - name: "entire_lot"
+      x_range: [0, 44]
+      description: "無方向限制"
+  validation_parameters:
+    distance_threshold: 5.0
+    min_reverse_reject: 0.25
+    min_aligned_fraction: 0.90
+    verbose: false
+
+visualization:
+  walls:
+    - points: [[0.0, 0.0], [33.0, 0.0]]
+    - points: [[33.0, 0.0], [33.0, 5.5]]
+    - points: [[33.0, 5.5], [38.5, 5.5]]
+    - points: [[38.5, 5.5], [38.5, 38.0]]
+    - points: [[38.5, 38.0], [33.0, 38.0]]
+    - points: [[33.0, 38.0], [33.0, 39.0]]
+    - points: [[33.0, 39.0], [19.5, 39.0]]
+    - points: [[19.5, 39.0], [19.5, 19.0]]
+    - points: [[19.5, 19.0], [0.0, 19.0]]
+    - points: [[0.0, 19.0], [0.0, 13.5]]
+    - points: [[0.0, 5.5], [0.0, 0.0]]
+
+  v_slot_lines:
+    - y_range: [13.5, 19.0]
+      x_values: [0.0, 2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0]
+    - y_range: [0.0, 5.5]
+      x_values: [0.5, 3.0, 5.5, 8.0, 10.5, 13.0, 15.5, 18.0, 20.5, 23.0, 25.5, 28.0, 30.5, 33.0]
+
+  slot_lines:
+    - x_range: [19.5, 25.0]
+      y_values: [19.0, 21.5, 24.0, 26.5, 29.0, 31.5, 34.0, 36.5, 39.0]
+    - x_range: [33.0, 38.5]
+      y_values: [5.5, 8.0, 10.5, 13.0, 15.5, 18.0, 20.5, 23.0, 25.5, 28.0, 30.5, 33.0, 35.5, 38.0]
+
+  aisle_guides:
+    # 垂直車道邊界
+    - x: 25.0
+      y_range: [19.0, 39.0]
+      style: open
+    - x: 33.0
+      y_range: [5.5, 38.0]
+      style: open
+    # 水平車道頂部邊界 (從 x=0 到垂直車道邊界)
+    - x: 0.0
+      y_range: [13.5, 13.5]  # 不畫出具體線條，僅保留格式
+
+  entrance:
+    x_range: [0.0, 0.0]
+    y: 9.5
+
+start_state:
+  x: 2.0
+  y: 9.5
+  theta: 0.0
+
+scenarios:
+  center_wall_x: 29.0
+  spots:
+    - name: "水平段頂部 (Horizontal Top)"
+      center_x: 11.25
+      center_y_options: [16.25]
+      default_y_index: 1
+      outward_theta: -1.5707963
+
+    - name: "水平段底部 (Horizontal Bottom)"
+      center_x: 14.25
+      center_y_options: [2.75]
+      default_y_index: 1
+      outward_theta: 1.5707963
+
+    - name: "垂直段左側 (Vertical Left)"
+      center_x: 22.25
+      center_y_options: [20.25, 22.75, 25.25, 27.75, 30.25, 32.75, 35.25, 37.75]
+      default_y_index: 4
+      outward_theta: 0.0
+
+    - name: "垂直段右側 (Vertical Right)"
+      center_x: 35.75
+      center_y_options: [16.75, 19.25, 21.75, 24.25, 26.75, 29.25, 31.75, 34.25, 36.75]
+      default_y_index: 6
+      outward_theta: 3.14159265

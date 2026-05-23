@@ -6,17 +6,6 @@ from matplotlib.patches import Polygon
 from collision import get_collision_marker_points
 from config import (
     PARAMS,
-    CENTER_WALL_X,
-    PARKING_SPOT_WIDTH,
-    RIGHT_WALL_X,
-    ROW1_X_END,
-    ROW1_X_START,
-    ROW2_X_END,
-    ROW2_X_START,
-    ROW3_X_END,
-    ROW3_X_START,
-    ROW4_X_END,
-    ROW4_X_START,
 )
 from heuristics import get_three_closest_wall_points
 from smoothing import smooth_trajectory_cg
@@ -51,6 +40,59 @@ def draw_vehicle_footprints(ax, nodes, color='deepskyblue'):
         ax.add_patch(poly)
 
 
+def _draw_map_elements(ax, obs_map):
+    """Draw map walls, slot lines, aisle guides, and labels using the map's
+    visualization elements interface.  Falls back to scatter-only when the
+    map does not provide visualization info."""
+
+    viz = obs_map.get_visualization_elements()
+
+    style_lookup = {
+        'wall': {'color': 'black', 'linewidth': 3},
+        'env': {'color': 'gray', 'linewidth': 1.5, 'linestyle': '-'},
+        'open': {'color': 'lightgray', 'linewidth': 1, 'linestyle': '--'},
+    }
+
+    # Walls
+    for wall in viz.get('walls', []):
+        pts = wall['points']
+        s = style_lookup.get(wall.get('style', 'wall'), style_lookup['wall'])
+        ax.plot([pts[0][0], pts[1][0]], [pts[0][1], pts[1][1]], **s)
+
+    # Slot lines (horizontal)
+    for sl in viz.get('slot_lines', []):
+        s = style_lookup.get(sl.get('style', 'env'), style_lookup['env'])
+        x0, x1 = sl['x_range']
+        for y in sl['y_values']:
+            ax.plot([x0, x1], [y, y], **s)
+
+    # Vertical slot lines
+    for vsl in viz.get('v_slot_lines', []):
+        s = style_lookup.get(vsl.get('style', 'env'), style_lookup['env'])
+        y0, y1 = vsl['y_range']
+        for x in vsl['x_values']:
+            ax.plot([x, x], [y0, y1], **s)
+
+    # Aisle guides
+    for ag in viz.get('aisle_guides', []):
+        s = style_lookup.get(ag.get('style', 'open'), style_lookup['open'])
+        y0, y1 = ag['y_range']
+        ax.plot([ag['x'], ag['x']], [y0, y1], **s)
+
+    # Labels
+    for lb in viz.get('labels', []):
+        ax.text(lb['x'], lb['y'], lb['text'],
+                ha=lb.get('ha', 'center'), va=lb.get('va', 'bottom'),
+                fontsize=12, color='blue', fontweight='bold')
+
+    # Entrance label
+    ent = viz.get('entrance')
+    if ent:
+        cx = (ent['x_range'][0] + ent['x_range'][1]) / 2.0
+        ax.text(cx, ent['y'] + 0.5, 'Entrance',
+                ha='center', va='bottom', fontsize=12, color='blue', fontweight='bold')
+
+
 def plot_results(start, goal, final_node, all_explored, obs_map, title_suffix='', save_path=None, show_plot=True):
     fig, ax = plt.subplots(figsize=(10, 12))
     fig.subplots_adjust(right=0.76)
@@ -59,31 +101,8 @@ def plot_results(start, goal, final_node, all_explored, obs_map, title_suffix=''
     oy = [p[1] for p in obs_map.obstacles]
     ax.scatter(ox, oy, c='black', marker='s', s=10)
 
-    wall_style = {'color': 'black', 'linewidth': 3}
-    env_style = {'color': 'gray', 'linewidth': 1.5, 'linestyle': '-'}
-    open_style = {'color': 'lightgray', 'linewidth': 1, 'linestyle': '--'}
-
-    ax.plot([0, ROW3_X_END], [45, 45], **wall_style)
-    ax.plot([ROW4_X_START, RIGHT_WALL_X], [45, 45], **wall_style)
-    ax.plot([0, RIGHT_WALL_X], [0, 0], **wall_style)
-    ax.plot([0, 0], [0, 45], **wall_style)
-    ax.plot([RIGHT_WALL_X, RIGHT_WALL_X], [0, 45], **wall_style)
-    ax.plot([CENTER_WALL_X, CENTER_WALL_X], [4.5, 36.5], **wall_style)
-
-    start_y, end_y = 4.5, 36.5
-    y_lines = np.arange(start_y, end_y + PARKING_SPOT_WIDTH, PARKING_SPOT_WIDTH)
-    row1_x = [ROW1_X_START, ROW1_X_END]
-    row2_x = [ROW2_X_START, ROW2_X_END]
-    row3_x = [ROW3_X_START, ROW3_X_END]
-    row4_x = [ROW4_X_START, ROW4_X_END]
-    for y in y_lines:
-        for rx in [row1_x, row2_x, row3_x, row4_x]:
-            ax.plot(rx, [y, y], **env_style)
-
-    for x in [ROW1_X_END, ROW2_X_START, ROW3_X_END, ROW4_X_START]:
-        ax.plot([x, x], [start_y, end_y], **open_style)
-
-    ax.text((ROW3_X_END + ROW4_X_START) / 2, 45.5, 'Entrance', ha='center', va='bottom', fontsize=12, color='blue', fontweight='bold')
+    # 使用通用可視化接口繪製地圖元素
+    _draw_map_elements(ax, obs_map)
 
     path_nodes = []
     curr = final_node

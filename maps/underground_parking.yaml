@@ -1,0 +1,199 @@
+# =============================================================================
+# 地下停車場地圖 (Underground Parking Map) — YAML 格式範例
+# =============================================================================
+# 這是將原有 UndergroundParkingMap 完全用 YAML 表示的參考範例。
+# 你可以複製此檔案並修改數值來創建新地圖。
+
+metadata:
+  name: "地下停車場 (YAML版)"
+  version: "1.0"
+  description: "原有 UndergroundParkingMap 的 YAML 等效版本"
+
+# =============================================================================
+# 佈局基本尺寸
+# =============================================================================
+layout:
+  width: 38.0       # 地圖總寬度 (RIGHT_WALL_X)
+  height: 45.0      # 地圖總高度
+  grid_resolution: 1.0
+  obstacle_sample_step: 0.5    # 障礙物取樣間距
+
+# =============================================================================
+# 障礙物定義
+# =============================================================================
+# 支援的 type:
+#   - line:             兩點之間的線段
+#   - rect:             矩形邊框 (origin + width + height)
+#   - horizontal_lines: 指定 x 範圍內在多個 y 值畫橫線 (車格分隔線)
+#   - points:           離散障礙物點
+
+obstacles:
+  # --- 外牆 ---
+  - type: line
+    name: "top_wall_left"
+    start: [0, 45]
+    end: [24.5, 45]
+
+  - type: line
+    name: "top_wall_right"
+    start: [32.5, 45]
+    end: [38, 45]
+
+  - type: line
+    name: "bottom_wall"
+    start: [0, 0]
+    end: [38, 0]
+
+  - type: line
+    name: "left_wall"
+    start: [0, 0]
+    end: [0, 45]
+
+  - type: line
+    name: "right_wall"
+    start: [38, 0]
+    end: [38, 45]
+
+  # --- 中央牆 ---
+  - type: line
+    name: "center_wall"
+    start: [19, 4.5]
+    end: [19, 36.5]
+
+  # --- 車格分隔線 (Row 1: 左邊靠牆) ---
+  - type: horizontal_lines
+    name: "row1_slot_lines"
+    x_range: [0.0, 5.5]
+    y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+
+  # --- 車格分隔線 (Row 2: 左邊靠中牆) ---
+  - type: horizontal_lines
+    name: "row2_slot_lines"
+    x_range: [13.5, 19.0]
+    y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+
+  # --- 車格分隔線 (Row 3: 右邊靠中牆) ---
+  - type: horizontal_lines
+    name: "row3_slot_lines"
+    x_range: [19.0, 24.5]
+    y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+
+  # --- 車格分隔線 (Row 4: 右邊靠牆) ---
+  - type: horizontal_lines
+    name: "row4_slot_lines"
+    x_range: [32.5, 38.0]
+    y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+
+# =============================================================================
+# 方向規則 (單行道)
+# =============================================================================
+directional_rules:
+  aisles:
+    - name: "left_aisle"
+      x_range: [5.0, 14.0]
+      flow_direction: "upward"
+      forbidden_dy_sign: -1    # 禁止向下 (dy < 0)
+
+    - name: "right_aisle"
+      x_range: [24.0, 33.0]
+      flow_direction: "downward"
+      forbidden_dy_sign: 1     # 禁止向上 (dy > 0)
+
+  unrestricted_zones:
+    - name: "center_wall_zone"
+      x_range: [15.0, 23.0]
+      description: "中央牆壁區域，無方向限制"
+
+  validation_parameters:
+    distance_threshold: 5.0
+    min_reverse_reject: 0.25
+    min_aligned_fraction: 0.90
+    verbose: false
+
+# =============================================================================
+# 可視化設定
+# =============================================================================
+visualization:
+  walls:
+    - points: [[0, 45], [24.5, 45]]
+      style: wall
+    - points: [[32.5, 45], [38, 45]]
+      style: wall
+    - points: [[0, 0], [38, 0]]
+      style: wall
+    - points: [[0, 0], [0, 45]]
+      style: wall
+    - points: [[38, 0], [38, 45]]
+      style: wall
+    - points: [[19, 4.5], [19, 36.5]]
+      style: wall
+
+  slot_lines:
+    - x_range: [0.0, 5.5]
+      y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+      style: env
+    - x_range: [13.5, 19.0]
+      y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+      style: env
+    - x_range: [19.0, 24.5]
+      y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+      style: env
+    - x_range: [32.5, 38.0]
+      y_values: [4.5, 7.0, 9.5, 12.0, 14.5, 17.0, 19.5, 22.0, 24.5, 27.0, 29.5, 32.0, 34.5, 37.0]
+      style: env
+
+  aisle_guides:
+    - x: 5.5
+      y_range: [4.5, 36.5]
+      style: open
+    - x: 13.5
+      y_range: [4.5, 36.5]
+      style: open
+    - x: 24.5
+      y_range: [4.5, 36.5]
+      style: open
+    - x: 32.5
+      y_range: [4.5, 36.5]
+      style: open
+
+  entrance:
+    x_range: [24.5, 32.5]
+    y: 45.0
+
+# =============================================================================
+# 起始狀態
+# =============================================================================
+start_state:
+  x: 28.5       # 右車道中央 X
+  y: 44.0
+  theta: -1.5707963  # -pi/2
+
+# =============================================================================
+# 停車場景配置
+# =============================================================================
+scenarios:
+  center_wall_x: 19.0
+  spots:
+    - name: "Q1_upper_left"
+      center_x: 16.25
+      center_y_options: [23.75, 26.25, 28.75, 31.25, 33.75, 36.25]
+      default_y_index: 4
+      outward_theta: 3.14159265
+
+    - name: "Q2_upper_right"
+      center_x: 21.75
+      center_y_options: [23.75, 26.25, 28.75, 31.25, 33.75, 36.25]
+      default_y_index: 4
+      outward_theta: 0.0
+
+    - name: "Q3_lower_left"
+      center_x: 16.25
+      center_y_options: [5.75, 8.25, 10.75, 13.25, 15.75, 18.25, 20.75]
+      default_y_index: 4
+      outward_theta: 3.14159265
+
+    - name: "Q4_lower_right"
+      center_x: 21.75
+      center_y_options: [5.75, 8.25, 10.75, 13.25, 15.75, 18.25, 20.75]
+      default_y_index: 4
+      outward_theta: 0.0
